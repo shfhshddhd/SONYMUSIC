@@ -1,0 +1,163 @@
+name: Run SONYMUSIC
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: sonymusic
+  cancel-in-progress: false
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 355
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg build-essential libffi-dev libssl-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Validate required secrets
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_DB_URI: ${{ secrets.MONGO_DB_URI }}
+          LOG_GROUP_ID: ${{ secrets.LOG_GROUP_ID }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+          STRING_SESSION: ${{ secrets.STRING_SESSION }}
+        run: |
+          set -euo pipefail
+          for name in API_ID API_HASH BOT_TOKEN MONGO_DB_URI LOG_GROUP_ID OWNER_ID STRING_SESSION; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required secret: $name"
+              exit 1
+            fi
+          done
+
+      - name: Start bot
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_DB_URI: ${{ secrets.MONGO_DB_URI }}
+          LOG_GROUP_ID: ${{ secrets.LOG_GROUP_ID }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+          STRING_SESSION: ${{ secrets.STRING_SESSION }}
+          STRING_SESSION2: ${{ secrets.STRING_SESSION2 }}
+          STRING_SESSION3: ${{ secrets.STRING_SESSION3 }}
+          STRING_SESSION4: ${{ secrets.STRING_SESSION4 }}
+          STRING_SESSION5: ${{ secrets.STRING_SESSION5 }}
+          DURATION_LIMIT: ${{ secrets.DURATION_LIMIT }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          UPSTREAM_REPO: ${{ secrets.UPSTREAM_REPO }}
+          UPSTREAM_BRANCH: ${{ secrets.UPSTREAM_BRANCH }}
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+          SUPPORT_CHAT: ${{ secrets.SUPPORT_CHAT }}
+          SUPPORT_GROUP: ${{ secrets.SUPPORT_GROUP }}
+          AUTO_LEAVING_ASSISTANT: ${{ secrets.AUTO_LEAVING_ASSISTANT }}
+          PRIVACY_LINK: ${{ secrets.PRIVACY_LINK }}
+          API_URL: ${{ secrets.API_URL }}
+          VIDEO_API_URL: ${{ secrets.VIDEO_API_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          PLAYLIST_FETCH_LIMIT: ${{ secrets.PLAYLIST_FETCH_LIMIT }}
+          TG_AUDIO_FILESIZE_LIMIT: ${{ secrets.TG_AUDIO_FILESIZE_LIMIT }}
+          TG_VIDEO_FILESIZE_LIMIT: ${{ secrets.TG_VIDEO_FILESIZE_LIMIT }}
+          START_IMG_URL: ${{ secrets.START_IMG_URL }}
+          PING_IMG_URL: ${{ secrets.PING_IMG_URL }}
+          PYTHONUNBUFFERED: "1"
+          PYTHONFAULTHANDLER: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$RUNNER_TEMP/sonymusic.log"
+          nohup bash start > "$RUNNER_TEMP/sonymusic.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/sonymusic.pid"
+          echo "SONYMUSIC started with process PID $(cat "$RUNNER_TEMP/sonymusic.pid")"
+
+      - name: Verify bot ready
+        env:
+          PID_FILE: ${{ runner.temp }}/sonymusic.pid
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..120}; do
+            if [[ -f "$PID_FILE" ]]; then
+              pid="$(cat "$PID_FILE")"
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "::error::SONYMUSIC exited during startup."
+                echo "===== LAST 200 BOT LOG LINES ====="
+                tail -n 200 "$RUNNER_TEMP/sonymusic.log" || true
+                exit 1
+              fi
+              if (( i >= 30 )); then
+                echo "SONYMUSIC process is alive after startup wait."
+                exit 0
+              fi
+            fi
+            sleep 1
+          done
+          echo "::error::SONYMUSIC did not become ready."
+          echo "===== LAST 200 BOT LOG LINES ====="
+          tail -n 200 "$RUNNER_TEMP/sonymusic.log" || true
+          exit 1
+
+      - name: Monitor and schedule successor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PID_FILE: ${{ runner.temp }}/sonymusic.pid
+        shell: bash
+        run: |
+          set -euo pipefail
+          touch "$RUNNER_TEMP/sonymusic.log"
+          tail -n 0 -F "$RUNNER_TEMP/sonymusic.log" &
+          tail_pid=$!
+          trap 'kill "$tail_pid" 2>/dev/null || true' EXIT
+
+          started="$(date +%s)"
+          dispatched=false
+          while true; do
+            pid="$(cat "$PID_FILE")"
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "::error::SONYMUSIC process stopped."
+              echo "===== LAST 200 BOT LOG LINES ====="
+              tail -n 200 "$RUNNER_TEMP/sonymusic.log" || true
+              exit 1
+            fi
+
+            age=$(( $(date +%s) - started ))
+            if (( age >= 20100 && dispatched == false )); then
+              echo "Starting successor runner before the 6-hour limit..."
+              gh workflow run run-sonymusic.yml --repo "$GITHUB_REPOSITORY" --ref main
+              dispatched=true
+            fi
+            sleep 30
+          done
