@@ -83,7 +83,7 @@ jobs:
           UPSTREAM_BRANCH: ${{ secrets.UPSTREAM_BRANCH }}
           GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
           SUPPORT_CHAT: ${{ secrets.SUPPORT_CHAT }}
-          SUPPORT_GROUP: ${{ secrets.SUPPORT_GROUP }}
+          SUPPORT_GROUP: ${{ secrets.SUPPORT_GROUP || 'https://t.me/SASTA_DEVLOPER_HU' }}
           AUTO_LEAVING_ASSISTANT: ${{ secrets.AUTO_LEAVING_ASSISTANT }}
           PRIVACY_LINK: ${{ secrets.PRIVACY_LINK }}
           API_URL: ${{ secrets.API_URL }}
@@ -95,7 +95,7 @@ jobs:
           TG_AUDIO_FILESIZE_LIMIT: ${{ secrets.TG_AUDIO_FILESIZE_LIMIT }}
           TG_VIDEO_FILESIZE_LIMIT: ${{ secrets.TG_VIDEO_FILESIZE_LIMIT }}
           START_IMG_URL: ${{ secrets.START_IMG_URL }}
-          PING_IMG_URL: ${{ secrets.PING_IMG_URL }}
+          PING_IMG_URL: ${{ secrets.PING_IMG_URL || 'https://kommodo.ai/i/sr1cNWiWXPjko9DvRseT' }}
           PYTHONUNBUFFERED: "1"
           PYTHONFAULTHANDLER: "1"
         shell: bash
