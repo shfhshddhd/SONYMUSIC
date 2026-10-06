@@ -1,16 +1,11 @@
 name: SONYMUSIC Controller
 
 on:
-  workflow_run:
-    workflows: ["Run SONYMUSIC"]
-    types: [completed]
   workflow_dispatch:
-  schedule:
-    - cron: "*/5 * * * *"
 
 concurrency:
   group: sonymusic-controller
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -51,7 +46,7 @@ jobs:
             controller_handover_done=true
             echo "5h35m reached. Dispatching new SONYMUSIC controller..."
             gh workflow run "$CONTROLLER_WORKFLOW" --repo "$REPO" --ref "$BRANCH"
-            echo "New controller dispatched. Current controller will be cancelled by concurrency handover."
+            echo "New controller dispatched. Current controller will finish its handover cycle without being cancelled by an external trigger."
           }
 
           active_json() {
