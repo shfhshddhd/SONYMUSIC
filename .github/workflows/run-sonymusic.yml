@@ -10,6 +10,9 @@ permissions:
   contents: read
   actions: write
 
+# IMPORTANT:
+# Keep exactly one SONYMUSIC worker active at a time.
+# A successor may be queued, but it must wait until the current worker ends.
 concurrency:
   group: sonymusic
   cancel-in-progress: false
@@ -144,6 +147,7 @@ jobs:
 
           started="$(date +%s)"
           dispatched=false
+
           while true; do
             pid="$(cat "$PID_FILE")"
             if ! kill -0 "$pid" 2>/dev/null; then
@@ -154,10 +158,16 @@ jobs:
             fi
 
             age=$(( $(date +%s) - started ))
+
+            # Queue exactly one successor before the GitHub runner limit.
+            # Because of the concurrency group above, the successor waits
+            # instead of starting alongside this worker.
             if (( age >= 20100 && dispatched == false )); then
-              echo "Starting successor runner before the 6-hour limit..."
+              echo "Queueing successor runner before the 6-hour limit..."
               gh workflow run run-sonymusic.yml --repo "$GITHUB_REPOSITORY" --ref main
               dispatched=true
+              echo "Successor queued. Current worker remains the only active worker."
             fi
+
             sleep 30
           done
