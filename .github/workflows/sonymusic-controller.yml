@@ -8,23 +8,21 @@ on:
   schedule:
     - cron: "*/5 * * * *"
 
-# Controller runs are short reconciliation jobs.
-# A scheduled invocation may replace an older controller invocation safely.
 concurrency:
   group: sonymusic-controller
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
   actions: write
 
 jobs:
-  reconcile:
+  supervise:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 350
 
     steps:
-      - name: Reconcile SONYMUSIC worker
+      - name: Monitor SONYMUSIC worker
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -34,31 +32,51 @@ jobs:
           REPO="$GITHUB_REPOSITORY"
           WORKFLOW="run-sonymusic.yml"
           BRANCH="main"
+          started="$(date +%s)"
+          last_recovery=0
 
-          active_json="$(gh run list             --repo "$REPO"             --workflow "$WORKFLOW"             --branch "$BRANCH"             --limit 100             --json databaseId,status,createdAt,number             | jq '[.[] |
-                select(
-                  .status == "queued" or
-                  .status == "in_progress" or
-                  .status == "waiting" or
-                  .status == "pending" or
-                  .status == "requested"
-                ) |
-                {
-                  id: .databaseId,
-                  status: .status,
-                  created_at: .createdAt,
-                  run_number: .number
-                }
-              ] | sort_by(.created_at)')"
+          echo "SONYMUSIC Controller supervisor started."
 
-          count="$(jq 'length' <<< "$active_json")"
-          echo "Active SONYMUSIC workflow runs: $count"
-          jq . <<< "$active_json"
+          while true; do
+            now="$(date +%s)"
+            age=$((now - started))
 
-          if (( count == 0 )); then
-            echo "No SONYMUSIC worker is active or queued. Starting a recovery worker..."
-            gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"
-          else
-            echo "Worker already exists. No additional worker will be dispatched."
-            echo "This preserves the single-worker STRING_SESSION safety rule."
-          fi
+            active_json="$(gh run list               --repo "$REPO"               --workflow "$WORKFLOW"               --branch "$BRANCH"               --limit 100               --json databaseId,status,createdAt,number               | jq '[.[] |
+                  select(
+                    .status == "queued" or
+                    .status == "in_progress" or
+                    .status == "waiting" or
+                    .status == "pending" or
+                    .status == "requested"
+                  ) |
+                  {
+                    id: .databaseId,
+                    status: .status,
+                    created_at: .createdAt,
+                    run_number: .number
+                  }
+                ] | sort_by(.created_at)')"
+
+            count="$(jq 'length' <<< "$active_json")"
+            echo "SONYMUSIC worker runs currently active/queued: $count"
+            jq . <<< "$active_json"
+
+            if (( count == 0 )); then
+              if (( now - last_recovery >= 120 )); then
+                echo "No SONYMUSIC worker is active or queued. Starting recovery worker..."
+                gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"
+                last_recovery=$now
+              else
+                echo "Recovery cooldown active."
+              fi
+            else
+              echo "Worker exists. No duplicate worker will be started."
+            fi
+
+            if (( age >= 1200 )); then
+              echo "Controller checkpoint reached; exiting cleanly."
+              exit 0
+            fi
+
+            sleep 30
+          done
