@@ -40,7 +40,7 @@ GIT_TOKEN = getenv(
 )  # Fill this variable if your upstream repository is private
 
 SUPPORT_CHANNEL = getenv("SUPPORT_CHAT", "https://t.me/itzdhruv1060")
-SUPPORT_GROUP = getenv("SUPPORT_GROUP", "https://t.me/itzdhruv1060")
+SUPPORT_GROUP = getenv("SUPPORT_GROUP", "https://t.me/SASTA_DEVLOPER_HU")
 
 # Set this to True if you want the assistant to automatically leave chats after an interval
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", False))
@@ -89,7 +89,7 @@ START_IMG_URL = getenv(
     "START_IMG_URL", "https://files.catbox.moe/nzl4fx.mp4"
 )
 PING_IMG_URL = getenv(
-    "PING_IMG_URL", "https://files.catbox.moe/nzl4fx.mp4"
+    "PING_IMG_URL", "https://kommodo.ai/i/sr1cNWiWXPjko9DvRseT"
 )
 PLAYLIST_IMG_URL = "https://files.catbox.moe/nzl4fx.mp4"
 STATS_IMG_URL = "https://files.catbox.moe/nzl4fx.mp4"
