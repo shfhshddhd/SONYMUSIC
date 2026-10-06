@@ -73,8 +73,8 @@ jobs:
               echo "Worker exists. No duplicate worker will be started."
             fi
 
-            if (( age >= 1200 )); then
-              echo "Controller checkpoint reached; exiting cleanly."
+            if (( age >= 19800 )); then
+              echo "Controller checkpoint reached after 5h30m; exiting cleanly."
               exit 0
             fi
 
