@@ -75,8 +75,8 @@ jobs:
 
             if (( age_minutes >= CONTROLLER_HANDOVER_MINUTES )); then
               dispatch_controller
-              sleep 30
-              continue
+              echo "Controller handover queued. Ending current controller cleanly."
+              exit 0
             fi
 
             active="$(active_json)"
