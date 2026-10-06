@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: sonymusic-controller
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 350
 
     steps:
-      - name: Monitor SONYMUSIC worker
+      - name: Watch, recover and hand over SONYMUSIC controller
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -31,17 +31,31 @@ jobs:
 
           REPO="$GITHUB_REPOSITORY"
           WORKFLOW="run-sonymusic.yml"
+          CONTROLLER_WORKFLOW="sonymusic-controller.yml"
           BRANCH="main"
-          started="$(date +%s)"
+
+          CONTROLLER_HANDOVER_MINUTES=335
+          controller_started="$(date -u +%s)"
+          controller_handover_done=false
           last_recovery=0
 
-          echo "SONYMUSIC Controller supervisor started."
+          dispatch_worker() {
+            gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"
+          }
 
-          while true; do
-            now="$(date +%s)"
-            age=$((now - started))
+          dispatch_controller() {
+            if [[ "$controller_handover_done" == "true" ]]; then
+              return
+            fi
 
-            active_json="$(gh run list               --repo "$REPO"               --workflow "$WORKFLOW"               --branch "$BRANCH"               --limit 100               --json databaseId,status,createdAt,number               | jq '[.[] |
+            controller_handover_done=true
+            echo "5h35m reached. Dispatching new SONYMUSIC controller..."
+            gh workflow run "$CONTROLLER_WORKFLOW" --repo "$REPO" --ref "$BRANCH"
+            echo "New controller dispatched. Current controller will be cancelled by concurrency handover."
+          }
+
+          active_json() {
+            gh run list               --repo "$REPO"               --workflow "$WORKFLOW"               --branch "$BRANCH"               --limit 100               --json databaseId,status,createdAt,number               | jq '[.[] |
                   select(
                     .status == "queued" or
                     .status == "in_progress" or
@@ -55,27 +69,37 @@ jobs:
                     created_at: .createdAt,
                     run_number: .number
                   }
-                ] | sort_by(.created_at)')"
+                ] | sort_by(.created_at)'
+          }
 
-            count="$(jq 'length' <<< "$active_json")"
+          echo "SONYMUSIC Controller supervisor started."
+
+          while true; do
+            now="$(date -u +%s)"
+            age_minutes=$(( (now - controller_started) / 60 ))
+
+            if (( age_minutes >= CONTROLLER_HANDOVER_MINUTES )); then
+              dispatch_controller
+              sleep 30
+              continue
+            fi
+
+            active="$(active_json)"
+            count="$(jq 'length' <<< "$active")"
+
             echo "SONYMUSIC worker runs currently active/queued: $count"
-            jq . <<< "$active_json"
+            jq . <<< "$active"
 
             if (( count == 0 )); then
               if (( now - last_recovery >= 120 )); then
                 echo "No SONYMUSIC worker is active or queued. Starting recovery worker..."
-                gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"
+                dispatch_worker
                 last_recovery=$now
               else
                 echo "Recovery cooldown active."
               fi
             else
               echo "Worker exists. No duplicate worker will be started."
-            fi
-
-            if (( age >= 19800 )); then
-              echo "Controller checkpoint reached after 5h30m; exiting cleanly."
-              exit 0
             fi
 
             sleep 30
