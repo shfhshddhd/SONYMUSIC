@@ -17,6 +17,7 @@ chatsdb = mongodb.chats
 chatdb = mongodb.chat
 channeldb = mongodb.cplaymode
 countdb = mongodb.upcount
+autoplaydb = mongodb.autoplay
 gbansdb = mongodb.gban
 langdb = mongodb.language
 onoffdb = mongodb.onoffper
@@ -42,6 +43,8 @@ pause = {}
 playmode = {}
 playtype = {}
 skipmode = {}
+autoplay = {}
+autoplay_history = {}
 
 
 async def get_assistant_number(chat_id: int) -> str:
@@ -666,3 +669,50 @@ async def remove_banned_user(user_id: int):
     if not is_gbanned:
         return
     return await blockeddb.delete_one({"user_id": user_id})
+
+
+# AUTOPLAY METHODS
+async def get_autoplay(chat_id: int) -> bool:
+    enabled = autoplay.get(chat_id)
+    if enabled is not None:
+        return enabled
+    doc = await autoplaydb.find_one({"chat_id": chat_id})
+    enabled = bool(doc.get("enabled", False)) if doc else False
+    autoplay[chat_id] = enabled
+    return enabled
+
+
+async def set_autoplay(chat_id: int, enabled: bool):
+    autoplay[chat_id] = bool(enabled)
+    await autoplaydb.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"enabled": bool(enabled)}},
+        upsert=True,
+    )
+
+
+async def get_autoplay_history(chat_id: int) -> list:
+    history = autoplay_history.get(chat_id)
+    if history is not None:
+        return list(history)
+    doc = await autoplaydb.find_one({"chat_id": chat_id})
+    history = list(doc.get("history", [])) if doc else []
+    history = history[-30:]
+    autoplay_history[chat_id] = history
+    return list(history)
+
+
+async def add_autoplay_history(chat_id: int, track_id: str):
+    if not track_id:
+        return
+    history = await get_autoplay_history(chat_id)
+    if track_id in history:
+        history.remove(track_id)
+    history.append(track_id)
+    history = history[-30:]
+    autoplay_history[chat_id] = history
+    await autoplaydb.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"history": history}},
+        upsert=True,
+    )
