@@ -127,7 +127,6 @@ jobs:
           TG_VIDEO_FILESIZE_LIMIT: ${{ secrets.TG_VIDEO_FILESIZE_LIMIT }}
           START_IMG_URL: ${{ secrets.START_IMG_URL || 'https://kommodo.ai/i/F187xSd7hL8dSRdI6uzM' }}
           PING_IMG_URL: ${{ secrets.PING_IMG_URL || 'https://kommodo.ai/i/sr1cNWiWXPjko9DvRseT' }}
-          STREAM_IMG_URL: ${{ secrets.STREAM_IMG_URL }}
           PYTHONUNBUFFERED: "1"
           PYTHONFAULTHANDLER: "1"
         shell: bash
