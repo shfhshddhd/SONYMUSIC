@@ -4,6 +4,23 @@ import config
 from RessoMusic import app
 
 
+async def get_owner_button():
+    try:
+        owner = await app.get_users(config.OWNER_ID)
+        if owner.username:
+            return InlineKeyboardButton(
+                "˹ ϻʏ ϻᴧsᴛєʀ ˼ 👑",
+                url=f"https://t.me/{owner.username}",
+            )
+    except Exception:
+        pass
+
+    return InlineKeyboardButton(
+        "˹ ϻʏ ϻᴧsᴛєʀ ˼ 👑",
+        url=f"tg://user?id={config.OWNER_ID}",
+    )
+
+
 def start_panel(_):
     buttons = [
         [
@@ -16,7 +33,8 @@ def start_panel(_):
     return buttons
 
 
-def private_panel(_):
+async def private_panel(_):
+    owner_button = await get_owner_button()
     buttons = [
         [
             InlineKeyboardButton(
@@ -28,9 +46,7 @@ def private_panel(_):
         InlineKeyboardButton("˹ᴄʜᴧɴɴєʟ˼", url="https://t.me/itzdhruv1060"),
             #InlineKeyboardButton(text=_["S_B_7"], url=config.UPSTREAM_REPO),
         ],
-        [InlineKeyboardButton("˹ ϻʏ ϻᴧsᴛєʀ ˼ 👑", url=f"tg://user?id={config.OWNER_ID}")
-
-        ],
+        [owner_button],
         
     ]
     return buttons
