@@ -1,5 +1,6 @@
 # Thumbnail generator optimized for speed and JioSaavn custom templates
 import os
+import config
 import re
 import random
 import logging
