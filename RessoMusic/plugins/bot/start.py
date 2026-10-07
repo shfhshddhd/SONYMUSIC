@@ -117,6 +117,15 @@ async def get_welcome_caption(msg_type, default_text, user, bot, chat=None):
 # ================================
 @app.on_message(filters.command(["start"]) & filters.private & ~BANNED_USERS)
 @LanguageStart
+async def get_owner_display():
+    if config.OWNER_ID:
+        try:
+            owner = await app.get_users(config.OWNER_ID)
+            return owner.mention
+        except Exception:
+            pass
+    return '<a href="https://t.me/SAREEF_FUCKER">SAREEF_FUCKER</a>'
+
 async def start_pm(client, message: Message, _):
     
     # --- REACTION START ---
