@@ -43,7 +43,7 @@ async def private_panel(_):
             )
         ],
         [InlineKeyboardButton("˹ʜєʟᴘ˼", callback_data="settings_back_helper"),
-        InlineKeyboardButton("˹ᴄʜᴧɴɴєʟ˼", url="https://t.me/itzdhruv1060"),
+        InlineKeyboardButton("˹ᴄʜᴧɴɴєʟ˼", url="https://t.me/SASTA_DEVLOPER"),
             #InlineKeyboardButton(text=_["S_B_7"], url=config.UPSTREAM_REPO),
         ],
         [owner_button],
