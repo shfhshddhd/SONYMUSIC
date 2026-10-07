@@ -9,6 +9,8 @@ from RessoMusic.misc import SUDOERS, db
 from RessoMusic.utils.database import (
     get_active_chats,
     get_lang,
+    get_autoplay,
+    set_autoplay,
     get_upvote_count,
     is_active_chat,
     is_music_playing,
@@ -43,6 +45,34 @@ from strings import get_string
 
 checker = {}
 upvoters = {}
+
+
+@app.on_callback_query(filters.regex("^autoplay:toggle$") & ~BANNED_USERS)
+@languageCB
+async def autoplay_toggle(client, CallbackQuery, _):
+    chat_id = CallbackQuery.message.chat.id
+
+    if not await is_active_chat(chat_id):
+        return await CallbackQuery.answer(_["general_5"], show_alert=True)
+
+    is_non_admin = await is_nonadmin_chat(chat_id)
+    if not is_non_admin and CallbackQuery.from_user.id not in SUDOERS:
+        admins = adminlist.get(chat_id) or []
+        if CallbackQuery.from_user.id not in admins:
+            return await CallbackQuery.answer(_["admin_14"], show_alert=True)
+
+    try:
+        current = db.get(chat_id)
+        if not current or not current[0].get("mystic") or current[0]["mystic"].id != CallbackQuery.message.id:
+            return await CallbackQuery.answer("This song is no longer active.", show_alert=True)
+    except Exception:
+        return await CallbackQuery.answer("This song is no longer active.", show_alert=True)
+
+    enabled = not await get_autoplay(chat_id)
+    await set_autoplay(chat_id, enabled)
+    await CallbackQuery.answer(f"Autoplay {'ON' if enabled else 'OFF'}")
+
+
 
 
 
