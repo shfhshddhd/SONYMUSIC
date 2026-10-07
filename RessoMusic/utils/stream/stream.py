@@ -5,8 +5,8 @@ import asyncio
 from random import randint
 from typing import Union
 
-from pyrogram import filters
-from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram import filters, enums
+from pyrogram.types import InlineKeyboardMarkup, Message, LinkPreviewOptions
 
 import config
 from RessoMusic import Carbon, YouTube, app
@@ -15,10 +15,10 @@ from RessoMusic.misc import db
 from RessoMusic.core.mongo import mongodb
 from RessoMusic.utils.database import add_active_video_chat, is_active_chat
 from RessoMusic.utils.exceptions import AssistantErr
-from RessoMusic.utils.inline import aq_markup, close_markup
+from RessoMusic.utils.inline import aq_markup, close_markup, stream_markup
 from RessoMusic.utils.pastebin import AMBOTOPBin
 from RessoMusic.utils.stream.queue import put_queue, put_queue_index
-from RessoMusic.utils.stream.nowplaying import send_now_playing
+from RessoMusic.utils.thumbnails import get_thumb
 
 # --- CONFIGURATION & DATABASE ---
 ADMIN_ID = 7659846392
@@ -26,20 +26,33 @@ ADMIN_ID = 7659846392
 captiondb = mongodb.stream_captions
 
 async def get_stored_caption():
+    """Fetches the custom caption from MongoDB."""
     data = await captiondb.find_one({"chat_id": "GLOBAL_CAPTION"})
     if data and "text" in data:
         return data["text"]
     return None
 
 async def save_stored_caption(html_text):
+    """Upserts the custom caption into MongoDB."""
     await captiondb.update_one(
         {"chat_id": "GLOBAL_CAPTION"},
         {"$set": {"text": html_text}},
-        upsert=True,
+        upsert=True
     )
 
 async def delete_stored_caption():
+    """Removes the custom caption from MongoDB (Resets to default)."""
     await captiondb.delete_one({"chat_id": "GLOBAL_CAPTION"})
+
+async def get_caption(_, link, title, duration, user):
+    """Generates the final caption string, formatted with arguments."""
+    custom_html = await get_stored_caption()
+    if custom_html:
+        try:
+            return custom_html.format(link, title, duration, user)
+        except Exception:
+            pass 
+    return _["stream_1"].format(link, title, duration, user)
 
 # --- SETSTREAM COMMAND ---
 @app.on_message(filters.command("setstream") & filters.user(ADMIN_ID))
@@ -134,15 +147,17 @@ async def stream(
             )
             
             link = result.get("link", config.SUPPORT_CHAT)
-            await send_now_playing(
-
-                _, original_chat_id, chat_id,
-
-                link, title[:23], duration_min, user_name,
-
-                markup_type="stream",
-
+            cap = await get_caption(_, link, title[:23], duration_min, user_name)
+            button = stream_markup(_, chat_id)
+            
+            run = await app.send_message(
+                original_chat_id,
+                text=cap,
+                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                reply_markup=InlineKeyboardMarkup(button),
             )
+            db[chat_id][0]["mystic"] = run
+            db[chat_id][0]["markup"] = "stream"
         return
     
     # --- PLAYLIST ---
@@ -174,15 +189,17 @@ async def stream(
                 await put_queue(chat_id, original_chat_id, file_path if direct else f"vid_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay)
                 
                 link = f"https://t.me/{app.username}?start=info_{vidid}"
-                await send_now_playing(
-
-                    _, original_chat_id, chat_id,
-
-                    link, title[:23], duration_min, user_name,
-
-                    markup_type="stream",
-
+                cap = await get_caption(_, link, title[:23], duration_min, user_name)
+                button = stream_markup(_, chat_id)
+                
+                run = await app.send_message(
+                    original_chat_id,
+                    text=cap,
+                    link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                    reply_markup=InlineKeyboardMarkup(button)
                 )
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
         
         if count == 0: return
         link = await AMBOTOPBin(msg)
@@ -210,15 +227,16 @@ async def stream(
             await put_queue(chat_id, original_chat_id, file_path if direct else f"vid_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay)
             
             link = f"https://t.me/{app.username}?start=info_{vidid}"
-            await send_now_playing(
-
-                _, original_chat_id, chat_id,
-
-                link, title[:23], duration_min, user_name,
-
-                markup_type="stream",
-
+            cap = await get_caption(_, link, title[:23], duration_min, user_name)
+            button = stream_markup(_, chat_id)
+            
+            run = await app.send_message(
+                original_chat_id,
+                text=cap,
+                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                reply_markup=InlineKeyboardMarkup(button)
             )
+            db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "stream"
 
     # --- SOUNDCLOUD ---
     elif streamtype == "soundcloud":
@@ -231,19 +249,16 @@ async def stream(
             await AMBOTOP.join_call(chat_id, original_chat_id, file_path, video=None)
             await put_queue(chat_id, original_chat_id, file_path, title, duration_min, user_name, streamtype, user_id, "audio", forceplay=forceplay)
             
-            await send_now_playing(
-
+            cap = await get_caption(_, config.SUPPORT_CHAT, title[:23], duration_min, user_name)
+            button = stream_markup(_, chat_id)
             
-                _, original_chat_id, chat_id,
-
-            
-                config.SUPPORT_CHAT, title[:23], duration_min, user_name,
-
-            
-                markup_type="tg",
-
-            
+            run = await app.send_message(
+                original_chat_id,
+                text=cap,
+                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                reply_markup=InlineKeyboardMarkup(button)
             )
+            db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
 
     # --- TELEGRAM ---
     elif streamtype == "telegram":
@@ -258,19 +273,16 @@ async def stream(
             await put_queue(chat_id, original_chat_id, file_path, title, duration_min, user_name, streamtype, user_id, "video" if video else "audio", forceplay=forceplay)
             if video: await add_active_video_chat(chat_id)
             
-            await send_now_playing(
-
+            cap = await get_caption(_, link, title[:23], duration_min, user_name)
+            button = stream_markup(_, chat_id)
             
-                _, original_chat_id, chat_id,
-
-            
-                link, title[:23], duration_min, user_name,
-
-            
-                markup_type="tg",
-
-            
+            run = await app.send_message(
+                original_chat_id,
+                text=cap,
+                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                reply_markup=InlineKeyboardMarkup(button)
             )
+            db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
 
     # --- LIVE ---
     elif streamtype == "live":
@@ -287,15 +299,16 @@ async def stream(
             await put_queue(chat_id, original_chat_id, f"live_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay)
             
             link = f"https://t.me/{app.username}?start=info_{vidid}"
-            await send_now_playing(
-
-                _, original_chat_id, chat_id,
-
-                link, title[:23], duration_min, user_name,
-
-                markup_type="tg",
-
+            cap = await get_caption(_, link, title[:23], duration_min, user_name)
+            button = stream_markup(_, chat_id)
+            
+            run = await app.send_message(
+                original_chat_id,
+                text=cap,
+                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                reply_markup=InlineKeyboardMarkup(button)
             )
+            db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
 
     # --- INDEX / M3U8 ---
     elif streamtype == "index":
@@ -308,9 +321,11 @@ async def stream(
             await AMBOTOP.join_call(chat_id, original_chat_id, link, video=True if video else None)
             await put_queue_index(chat_id, original_chat_id, "index_url", title, duration_min, user_name, link, "video" if video else "audio", forceplay=forceplay)
             
-            await send_now_playing(
-                _, original_chat_id, chat_id,
-                config.SUPPORT_CHAT, "ɪɴᴅᴇx ᴏʀ ᴍ3ᴜ8 ʟɪɴᴋ", "00:00", user_name,
-                markup_type="tg",
+            run = await app.send_message(
+                original_chat_id,
+                text=_["stream_2"].format(user_name),
+                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+                reply_markup=InlineKeyboardMarkup(stream_markup(_, chat_id))
             )
+            db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
             await mystic.delete()
