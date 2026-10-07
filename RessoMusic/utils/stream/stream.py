@@ -18,7 +18,7 @@ from RessoMusic.utils.exceptions import AssistantErr
 from RessoMusic.utils.inline import aq_markup, close_markup, stream_markup
 from RessoMusic.utils.pastebin import AMBOTOPBin
 from RessoMusic.utils.stream.queue import put_queue, put_queue_index
-from RessoMusic.utils.thumbnails import get_thumb
+from RessoMusic.utils.thumbnails import FIXED_THUMBNAIL_URL, get_thumb
 
 # --- CONFIGURATION & DATABASE ---
 ADMIN_ID = 7659846392
@@ -106,7 +106,7 @@ async def stream(
     if streamtype == "drx":
         title = result.get("title", "Unknown")
         duration_min = result.get("duration_min", "00:00")
-        thumbnail = result.get("thumb", config.PLAYLIST_IMG_URL)
+        thumbnail = FIXED_THUMBNAIL_URL
         audio_url = result.get("filepath", "")
         vidid = result.get("vidid", "")
         
@@ -210,7 +210,7 @@ async def stream(
     # --- YOUTUBE ---
     elif streamtype == "youtube":
         vidid, title, duration_min = result["vidid"], result["title"].title(), result["duration_min"]
-        thumbnail, status = result["thumb"], True if video else None
+        thumbnail, status = FIXED_THUMBNAIL_URL, True if video else None
         
         try:
             file_path, direct = await YouTube.download(vidid, mystic, videoid=True, video=status)
@@ -286,7 +286,7 @@ async def stream(
 
     # --- LIVE ---
     elif streamtype == "live":
-        link, vidid, title, thumbnail = result["link"], result["vidid"], result["title"].title(), result["thumb"]
+        link, vidid, title, thumbnail = result["link"], result["vidid"], result["title"].title(), FIXED_THUMBNAIL_URL
         duration_min, status = "Live Track", True if video else None
         if await is_active_chat(chat_id):
             await put_queue(chat_id, original_chat_id, f"live_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio")
