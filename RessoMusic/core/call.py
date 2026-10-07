@@ -47,6 +47,7 @@ from RessoMusic.utils.exceptions import AssistantErr
 from RessoMusic.utils.formatters import check_duration, seconds_to_min, speed_converter
 from RessoMusic.utils.inline.play import stream_markup
 from RessoMusic.utils.stream.autoclear import auto_clean
+from RessoMusic.utils.stream.nowplaying import send_now_playing
 from RessoMusic.utils.thumbnails import get_thumb
 from strings import get_string
 
@@ -388,6 +389,7 @@ class Call(PyTgCalls):
             original_chat_id = check[0]["chat_id"]
             streamtype = check[0]["streamtype"]
             videoid = check[0]["vidid"]
+            vid_link = f"https://t.me/{app.username}?start=info_{videoid}"
             db[chat_id][0]["played"] = 0
             exis = (check[0]).get("old_dur")
             if exis:
@@ -426,18 +428,11 @@ class Call(PyTgCalls):
                         text=_["call_6"],
                     )
                 
-                button = stream_markup(_, chat_id)
-                vid_link = f"https://t.me/{app.username}?start=info_{videoid}"
-                cap = await get_caption(_, vid_link, title[:23], check[0]["dur"], user)
-
-                run = await app.send_message(
-                    chat_id=original_chat_id,
-                    text=cap,
-                    link_preview_options=preview_options,
-                    reply_markup=InlineKeyboardMarkup(button),
+                await send_now_playing(
+                    _, original_chat_id, chat_id,
+                    vid_link, title, check[0]["dur"], user,
+                    markup_type="tg",
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
             elif "vid_" in queued:
                 mystic = await app.send_message(original_chat_id, _["call_7"])
                 try:
@@ -470,19 +465,11 @@ class Call(PyTgCalls):
                         text=_["call_6"],
                     )
                 
-                button = stream_markup(_, chat_id)
-                await mystic.delete()
-                vid_link = f"https://t.me/{app.username}?start=info_{videoid}"
-                cap = await get_caption(_, vid_link, title[:23], check[0]["dur"], user)
-
-                run = await app.send_message(
-                    chat_id=original_chat_id,
-                    text=cap,
-                    link_preview_options=preview_options,
-                    reply_markup=InlineKeyboardMarkup(button),
+                await send_now_playing(
+                    _, original_chat_id, chat_id,
+                    vid_link, title, check[0]["dur"], user,
+                    markup_type="stream",
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "stream"
             elif "index_" in queued:
                 stream = (
                     AudioVideoPiped(
@@ -529,42 +516,23 @@ class Call(PyTgCalls):
                         text=_["call_6"],
                     )
                 if videoid == "telegram":
-                    button = stream_markup(_, chat_id)
-                    cap = await get_caption(_, config.SUPPORT_CHAT, title[:23], check[0]["dur"], user)
-
-                    run = await app.send_message(
-                        chat_id=original_chat_id,
-                        text=cap,
-                        link_preview_options=preview_options,
-                        reply_markup=InlineKeyboardMarkup(button),
+                    await send_now_playing(
+                        _, original_chat_id, chat_id,
+                        config.SUPPORT_CHAT, title, check[0]["dur"], user,
+                        markup_type="tg",
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "tg"
                 elif videoid == "soundcloud":
-                    button = stream_markup(_, chat_id)
-                    cap = await get_caption(_, config.SUPPORT_CHAT, title[:23], check[0]["dur"], user)
-
-                    run = await app.send_message(
-                        chat_id=original_chat_id,
-                        text=cap,
-                        link_preview_options=preview_options,
-                        reply_markup=InlineKeyboardMarkup(button),
+                    await send_now_playing(
+                        _, original_chat_id, chat_id,
+                        config.SUPPORT_CHAT, title, check[0]["dur"], user,
+                        markup_type="tg",
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "tg"
                 else:
-                    button = stream_markup(_, chat_id)
-                    vid_link = f"https://t.me/{app.username}?start=info_{videoid}"
-                    cap = await get_caption(_, vid_link, title[:23], check[0]["dur"], user)
-
-                    run = await app.send_message(
-                        chat_id=original_chat_id,
-                        text=cap,
-                        link_preview_options=preview_options,
-                        reply_markup=InlineKeyboardMarkup(button),
+                    await send_now_playing(
+                        _, original_chat_id, chat_id,
+                        vid_link, title, check[0]["dur"], user,
+                        markup_type="stream",
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "stream"
 
     async def ping(self):
         pings = []
