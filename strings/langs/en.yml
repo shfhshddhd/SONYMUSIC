@@ -171,7 +171,7 @@ queue_6 : "<b>🕚 ᴅᴜʀᴀᴛɪᴏɴ :</b> ᴜɴᴋɴᴏᴡɴ ᴅᴜʀᴀᴛ
 queue_7 : "\nᴄʟɪᴄᴋ ᴏɴ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ ᴛᴏ ɢᴇᴛ ᴡʜᴏʟᴇ ǫᴜᴇᴜᴇᴅ ʟɪsᴛ."
 queue_8 : "<b>{0} ᴘʟᴀʏᴇʀ</b>\n\n🎄 <b>sᴛʀᴇᴀᴍɪɴɢ :</b> {1}\n\n🔗 <b>sᴛʀᴇᴀᴍ ᴛʏᴘᴇ :</b> {2}\n🥀 <b>ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ :</b> {3}\n{4}"
 
-stream_1 : "<blockquote>▣ Sᴛᴀʀᴛᴇᴅ Sᴛʀᴇᴀᴍɪɴɢ♪</blockquote>\n<blockquote expandable><b>๏ Tɪᴛʟᴇ:</b> <a href={0}>{1}</a>\n<b>๏ Dᴜʀᴀᴛɪᴏɴ:</b> {2} ᴍɪɴᴜᴛᴇs\n<b>๏ Rᴇǫᴜᴇsᴛᴇᴅ:</b> {3}</blockquote>\n<blockquote>❖ ᴘᴏᴡєʀєᴅ» <a href=https://t.me/SAREEF_FUCKER>ꨄ︎𝒔𝒂𝒓𝒆𝒆𝒇 ᴥꪻ𝒐𝒉𝒊𝒅ꨄ︎‌‌</a></blockquote>"
+stream_1 : "<blockquote>▣ Sᴛᴀʀᴛᴇᴅ Sᴛʀᴇᴀᴍɪɴɢ♪</blockquote>\n<blockquote expandable><b>๏ Tɪᴛʟᴇ:</b> <a href={0}>{1}</a>\n<b>๏ Dᴜʀᴀᴛɪᴏɴ:</b> {2} ᴍɪɴᴜᴛᴇs\n<b>๏ Rᴇǫᴜᴇsᴛᴇᴅ:</b> {3}</blockquote>\n<blockquote>❖ ᴘᴏᴡєʀєᴅ» <a href=https://t.me/SAREEF_FUCKER>ꨄ︎ꪻ𝒐𝒉𝒊𝒅ꨄ︎‌‌</a></blockquote>"
 stream_2 : "<blockquote>▣ Sᴛᴀʀᴛᴇᴅ Sᴛʀᴇᴀᴍɪɴɢ♪</blockquote>\n<blockquote><b>➲ Sᴛᴀʀᴛᴇᴅ Sᴛʀᴇᴀᴍɪɴɢ|\n\n‣ sᴛʀᴇᴀᴍ ᴛʏᴘᴇ : ʟɪᴠᴇ sᴛʀᴇᴀᴍ [ᴜʀʟ]\n‣ ʙʏ : {0}}</blockquote>"
 
 
