@@ -41,7 +41,7 @@ pycryptodome
 pydub
 pyfiglet
 pykeyboard
-pyrotgfork >= 2.2.20
+pyrotgfork==2.2.24
 python-dotenv
 python-telegram-bot>=22.6
 python-whois
