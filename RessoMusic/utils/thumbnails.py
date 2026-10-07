@@ -211,6 +211,12 @@ async def get_thumb(videoid: str):
         return cache_path
 
     try:
+        thumbnail = None
+        title = "Unsupported"
+        duration = "Live"
+        views = "Unknown Views"
+        channel = "Unknown Channel"
+
         url = f"https://www.youtube.com/watch?v={videoid}"
         results = VideosSearch(url, limit=1)
         for result in (await results.next())["result"]:
