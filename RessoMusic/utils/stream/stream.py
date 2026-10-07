@@ -19,7 +19,6 @@ from RessoMusic.utils.inline import aq_markup, close_markup
 from RessoMusic.utils.pastebin import AMBOTOPBin
 from RessoMusic.utils.stream.queue import put_queue, put_queue_index
 from RessoMusic.utils.stream.nowplaying import send_now_playing
-from RessoMusic.utils.stream.nowplaying import send_now_playing
 
 # --- CONFIGURATION & DATABASE ---
 ADMIN_ID = 7659846392
@@ -309,11 +308,9 @@ async def stream(
             await AMBOTOP.join_call(chat_id, original_chat_id, link, video=True if video else None)
             await put_queue_index(chat_id, original_chat_id, "index_url", title, duration_min, user_name, link, "video" if video else "audio", forceplay=forceplay)
             
-            run = await app.send_message(
-                original_chat_id,
-                text=_["stream_2"].format(user_name),
-                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                reply_markup=InlineKeyboardMarkup(stream_markup(_, chat_id))
+            await send_now_playing(
+                _, original_chat_id, chat_id,
+                config.SUPPORT_CHAT, "ɪɴᴅᴇx ᴏʀ ᴍ3ᴜ8 ʟɪɴᴋ", "00:00", user_name,
+                markup_type="tg",
             )
-            db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
             await mystic.delete()
