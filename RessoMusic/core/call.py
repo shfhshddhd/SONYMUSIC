@@ -487,15 +487,11 @@ class Call(PyTgCalls):
                         original_chat_id,
                         text=_["call_6"],
                     )
-                button = stream_markup(_, chat_id)
-                run = await app.send_message(
-                    chat_id=original_chat_id,
-                    text=_["stream_2"].format(user),
-                    link_preview_options=preview_options,
-                    reply_markup=InlineKeyboardMarkup(button),
+                await send_now_playing(
+                    _, original_chat_id, chat_id,
+                    config.SUPPORT_CHAT, "ɪɴᴅᴇx ᴏʀ ᴍ3ᴜ8 ʟɪɴᴋ", "00:00", user,
+                    markup_type="tg",
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
             else:
                 if video:
                     stream = AudioVideoPiped(
