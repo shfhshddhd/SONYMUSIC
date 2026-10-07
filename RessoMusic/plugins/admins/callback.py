@@ -28,7 +28,7 @@ from RessoMusic.utils.decorators.language import languageCB
 from RessoMusic.utils.formatters import seconds_to_min
 from RessoMusic.utils.inline import close_markup, stream_markup
 from RessoMusic.utils.stream.autoclear import auto_clean
-from RessoMusic.utils.thumbnails import get_thumb
+from RessoMusic.utils.thumbnails import FIXED_THUMBNAIL_URL, get_thumb
 from config import (
     BANNED_USERS,
     SOUNCLOUD_IMG_URL,
@@ -246,7 +246,7 @@ async def del_back_playlist(client, CallbackQuery, _):
             except:
                 return await CallbackQuery.message.reply_text(_["call_6"])
             button = stream_markup(_, chat_id)
-            img = await get_thumb(videoid) or STREAM_IMG_URL
+            img = FIXED_THUMBNAIL_URL
             run = await CallbackQuery.message.reply_photo(
                 photo=img,
                 caption=_["stream_1"].format(
@@ -282,7 +282,7 @@ async def del_back_playlist(client, CallbackQuery, _):
             except:
                 return await mystic.edit_text(_["call_6"])
             button = stream_markup(_, chat_id)
-            img = await get_thumb(videoid) or STREAM_IMG_URL
+            img = FIXED_THUMBNAIL_URL
             run = await CallbackQuery.message.reply_photo(
                 photo=img,
                 caption=_["stream_1"].format(
@@ -304,7 +304,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 return await CallbackQuery.message.reply_text(_["call_6"])
             button = stream_markup(_, chat_id)
             run = await CallbackQuery.message.reply_photo(
-                photo=STREAM_IMG_URL,
+                photo=FIXED_THUMBNAIL_URL,
                 caption=_["stream_2"].format(user),
                 reply_markup=InlineKeyboardMarkup(button),
             )
@@ -353,7 +353,7 @@ async def del_back_playlist(client, CallbackQuery, _):
                 db[chat_id][0]["markup"] = "tg"
             else:
                 button = stream_markup(_, chat_id)
-                img = await get_thumb(videoid) or STREAM_IMG_URL
+                img = FIXED_THUMBNAIL_URL
                 run = await CallbackQuery.message.reply_photo(
                     photo=img,
                     caption=_["stream_1"].format(
