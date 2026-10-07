@@ -78,10 +78,25 @@ async def settings_back_markup(client, CallbackQuery: CallbackQuery, _):
     if CallbackQuery.message.chat.type == ChatType.PRIVATE:
         await app.resolve_peer(OWNER_ID)
         OWNER = OWNER_ID
-        buttons = private_panel(_)
+        buttons = await private_panel(_)
         UP, CPU, RAM, DISK = await bot_sys_stats()
+        try:
+            owner = await app.get_users(OWNER_ID)
+            owner_display = owner.mention
+        except Exception:
+            owner_display = '<a href="https://t.me/SAREEF_FUCKER">SAREEF_FUCKER</a>'
         return await CallbackQuery.edit_message_text(
-            _["start_2"].format(CallbackQuery.from_user.mention, app.mention, UP, DISK, CPU, RAM),
+            _["start_2"].format(
+                CallbackQuery.from_user.mention,
+                app.mention,
+                UP,
+                DISK,
+                CPU,
+                RAM,
+                0,
+                0,
+                owner_display,
+            ),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
