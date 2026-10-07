@@ -418,6 +418,11 @@ class Call(PyTgCalls):
 
         video_id = selected["id"]
         duration = selected.get("duration") or "00:00"
+        try:
+            duration_seconds = time_to_seconds(duration)
+        except Exception:
+            duration_seconds = 0
+            duration = "00:00"
         await add_autoplay_history(chat_id, video_id)
 
         return {
@@ -429,7 +434,7 @@ class Call(PyTgCalls):
             "chat_id": last_item.get("chat_id", chat_id),
             "file": f"vid_{video_id}",
             "vidid": video_id,
-            "seconds": time_to_seconds(duration) if duration != "00:00" else 0,
+            "seconds": duration_seconds,
             "played": 0,
         }
 
