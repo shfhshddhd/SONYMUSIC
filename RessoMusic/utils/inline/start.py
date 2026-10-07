@@ -28,7 +28,7 @@ def private_panel(_):
         InlineKeyboardButton("˹ᴄʜᴧɴɴєʟ˼", url="https://t.me/itzdhruv1060"),
             #InlineKeyboardButton(text=_["S_B_7"], url=config.UPSTREAM_REPO),
         ],
-        [InlineKeyboardButton("˹ ϻʏ ϻᴧsᴛєʀ ˼ 👑", url=f"https://t.me/itzdhruv")
+        [InlineKeyboardButton("˹ ϻʏ ϻᴧsᴛєʀ ˼ 👑", url=f"tg://user?id={config.OWNER_ID}")
 
         ],
         
