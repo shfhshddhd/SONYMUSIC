@@ -1,6 +1,5 @@
 # Thumbnail generator optimized for speed and JioSaavn custom templates
 import os
-import config
 import re
 import random
 import logging
@@ -14,7 +13,7 @@ from py_yt import VideosSearch
 logging.basicConfig(level=logging.INFO)
 
 JIOSAAVN_API = "https://jiosavan-lilac.vercel.app"
-FIXED_THUMBNAIL_URL = config.STREAM_IMG_URL
+FIXED_THUMBNAIL_URL = "https://kommodo.ai/i/J4cvrX1hnuirSLuEpM41"
 CACHE_DIR = "cache"
 
 # Ensure cache directory exists
