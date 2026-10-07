@@ -216,19 +216,23 @@ async def del_back_playlist(client, CallbackQuery, _):
                 if popped:
                     await auto_clean(popped)
                 if not check:
-                    await CallbackQuery.edit_message_text(
-                        f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
-                    )
-                    await CallbackQuery.message.reply_text(
-                        text=_["admin_6"].format(
-                            mention, CallbackQuery.message.chat.title
-                        ),
-                        reply_markup=close_markup(_),
-                    )
-                    try:
-                        return await AMBOTOP.stop_stream(chat_id)
-                    except:
-                        return
+                    autoplay_item = await AMBOTOP.get_autoplay_item(chat_id, popped)
+                    if autoplay_item:
+                        check.append(autoplay_item)
+                    else:
+                        await CallbackQuery.edit_message_text(
+                            f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
+                        )
+                        await CallbackQuery.message.reply_text(
+                            text=_["admin_6"].format(
+                                mention, CallbackQuery.message.chat.title
+                            ),
+                            reply_markup=close_markup(_),
+                        )
+                        try:
+                            return await AMBOTOP.stop_stream(chat_id)
+                        except:
+                            return
             except:
                 try:
                     await CallbackQuery.edit_message_text(
