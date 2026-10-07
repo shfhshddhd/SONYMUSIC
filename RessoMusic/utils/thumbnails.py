@@ -12,7 +12,8 @@ from py_yt import VideosSearch
 
 logging.basicConfig(level=logging.INFO)
 
-JIOSAAVN_API = "https://jiosavan-lilac.vercel.app"\r\nFIXED_THUMBNAIL_URL = "https://kommodo.ai/i/J4cvrX1hnuirSLuEpM41"
+JIOSAAVN_API = "https://jiosavan-lilac.vercel.app"
+FIXED_THUMBNAIL_URL = "https://kommodo.ai/i/J4cvrX1hnuirSLuEpM41"
 CACHE_DIR = "cache"
 
 # Ensure cache directory exists
