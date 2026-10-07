@@ -19,6 +19,7 @@ from RessoMusic.utils.inline import aq_markup, close_markup
 from RessoMusic.utils.pastebin import AMBOTOPBin
 from RessoMusic.utils.stream.queue import put_queue, put_queue_index
 from RessoMusic.utils.stream.nowplaying import send_now_playing
+from RessoMusic.utils.stream.nowplaying import send_now_playing
 
 # --- CONFIGURATION & DATABASE ---
 ADMIN_ID = 7659846392
