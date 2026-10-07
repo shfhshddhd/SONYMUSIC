@@ -244,7 +244,7 @@ async def stream(
             cap = await get_caption(_, link, title[:23], duration_min, user_name)
             button = stream_markup(_, chat_id)
             
-try:
+            try:
                 run = await send_now_playing(original_chat_id, cap, button)
                 db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "stream"
             except Exception:
