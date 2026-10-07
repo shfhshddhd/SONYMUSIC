@@ -200,20 +200,19 @@ async def stream(
                 cap = await get_caption(_, link, title[:23], duration_min, user_name)
                 button = stream_markup(_, chat_id)
                 
-    try:
-                run = await send_now_playing(original_chat_id, cap, button)
-                db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "stream"
-            except Exception:
                 try:
-                    run = await app.send_message(
-                        original_chat_id,
-                        text=cap,
-                        reply_markup=InlineKeyboardMarkup(button),
-                    )
+                    run = await send_now_playing(original_chat_id, cap, button)
                     db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "stream"
                 except Exception:
-                    pass
-                db[chat_id][0]["markup"] = "stream"
+                    try:
+                        run = await app.send_message(
+                            original_chat_id,
+                            text=cap,
+                            reply_markup=InlineKeyboardMarkup(button),
+                        )
+                        db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "stream"
+                    except Exception:
+                        pass
         
         if count == 0: return
         link = await AMBOTOPBin(msg)
