@@ -86,7 +86,7 @@ confirmer = {}
 
 
 START_IMG_URL = getenv(
-    "START_IMG_URL", "https://files.catbox.moe/nzl4fx.mp4"
+    "START_IMG_URL", "https://kommodo.ai/i/F187xSd7hL8dSRdI6uzM"
 )
 PING_IMG_URL = getenv(
     "PING_IMG_URL", "https://kommodo.ai/i/sr1cNWiWXPjko9DvRseT"
