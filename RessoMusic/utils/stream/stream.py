@@ -158,14 +158,21 @@ async def stream(
             cap = await get_caption(_, link, title[:23], duration_min, user_name)
             button = stream_markup(_, chat_id)
             
-            run = await app.send_message(
-                original_chat_id,
-                text=cap,
-                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                reply_markup=InlineKeyboardMarkup(button),
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
+            try:
+                run = await send_now_playing(original_chat_id, cap, button)
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
+            except Exception:
+                try:
+                    run = await app.send_message(
+                        original_chat_id,
+                        text=cap,
+                        reply_markup=InlineKeyboardMarkup(button),
+                    )
+                    db[chat_id][0]["mystic"] = run
+                    db[chat_id][0]["markup"] = "stream"
+                except Exception:
+                    pass
         return
     
     # --- PLAYLIST ---
