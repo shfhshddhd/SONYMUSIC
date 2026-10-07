@@ -115,8 +115,6 @@ async def get_welcome_caption(msg_type, default_text, user, bot, chat=None):
 # ================================
 #        START COMMAND (DM)
 # ================================
-@app.on_message(filters.command(["start"]) & filters.private & ~BANNED_USERS)
-@LanguageStart
 async def get_owner_display():
     if config.OWNER_ID:
         try:
@@ -126,6 +124,9 @@ async def get_owner_display():
             pass
     return '<a href="https://t.me/SAREEF_FUCKER">SAREEF_FUCKER</a>'
 
+
+@app.on_message(filters.command(["start"]) & filters.private & ~BANNED_USERS)
+@LanguageStart
 async def start_pm(client, message: Message, _):
     
     # --- REACTION START ---
@@ -200,10 +201,18 @@ async def start_pm(client, message: Message, _):
         UP, CPU, RAM, DISK = await bot_sys_stats()
         
         # --- GET CUSTOM OR DEFAULT CAPTION ---
+        owner_display = await get_owner_display()
         default_caption = _["start_2"].format(
-            message.from_user.mention, app.mention, UP, DISK, CPU, RAM, served_users, served_chats
+            message.from_user.mention,
+            app.mention,
+            UP,
+            DISK,
+            CPU,
+            RAM,
+            served_users,
+            served_chats,
+            owner_display,
         )
-        
         # Checking DB for Custom DM Message
         final_caption = await get_welcome_caption(
             "welcome_dm", 
