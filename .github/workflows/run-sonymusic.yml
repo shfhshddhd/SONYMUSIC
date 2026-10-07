@@ -45,6 +45,38 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
 
+      - name: Patch legacy PyTgCalls UpdateGroupCall handler
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pytgcalls.mtproto.pyrogram_client as mod
+
+          path = Path(mod.__file__)
+          text = path.read_text()
+
+          old = "                chat_id = self.chat_id(data2[update.chat_id])"
+          new = """                chat_ref = (
+                    data2.get(update.chat_id)
+                    if isinstance(data2, dict) and getattr(update, "chat_id", None) is not None
+                    else None
+                )
+                if chat_ref is not None:
+                    chat_id = self.chat_id(chat_ref)
+                else:
+                    chat_id = self._cache.get_chat_id(update.call.id)
+                if chat_id is None:
+                    raise ContinuePropagation()"""
+
+          if old not in text:
+              if "chat_ref = (" in text and "self._cache.get_chat_id(update.call.id)" in text:
+                  print("PyTgCalls UpdateGroupCall handler already patched.")
+              else:
+                  raise SystemExit("Expected PyTgCalls 0.9.7 handler was not found.")
+          else:
+              path.write_text(text.replace(old, new, 1))
+              print(f"Patched {path}")
+          PY
+
       - name: Validate required secrets
         env:
           API_ID: ${{ secrets.API_ID }}
