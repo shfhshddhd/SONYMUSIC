@@ -44,6 +44,14 @@ async def delete_stored_caption():
     """Removes the custom caption from MongoDB (Resets to default)."""
     await captiondb.delete_one({"chat_id": "GLOBAL_CAPTION"})
 
+async def send_now_playing(original_chat_id, caption, button):
+    return await app.send_photo(
+        original_chat_id,
+        photo=FIXED_THUMBNAIL_URL,
+        caption=caption,
+        reply_markup=InlineKeyboardMarkup(button),
+    )
+
 async def get_caption(_, link, title, duration, user):
     """Generates the final caption string, formatted with arguments."""
     custom_html = await get_stored_caption()
@@ -192,12 +200,7 @@ async def stream(
                 cap = await get_caption(_, link, title[:23], duration_min, user_name)
                 button = stream_markup(_, chat_id)
                 
-                run = await app.send_message(
-                    original_chat_id,
-                    text=cap,
-                    link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                    reply_markup=InlineKeyboardMarkup(button)
-                )
+                run = await send_now_playing(original_chat_id, cap, button)
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
         
@@ -230,12 +233,7 @@ async def stream(
             cap = await get_caption(_, link, title[:23], duration_min, user_name)
             button = stream_markup(_, chat_id)
             
-            run = await app.send_message(
-                original_chat_id,
-                text=cap,
-                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                reply_markup=InlineKeyboardMarkup(button)
-            )
+            run = await send_now_playing(original_chat_id, cap, button)
             db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "stream"
 
     # --- SOUNDCLOUD ---
@@ -252,12 +250,7 @@ async def stream(
             cap = await get_caption(_, config.SUPPORT_CHAT, title[:23], duration_min, user_name)
             button = stream_markup(_, chat_id)
             
-            run = await app.send_message(
-                original_chat_id,
-                text=cap,
-                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                reply_markup=InlineKeyboardMarkup(button)
-            )
+            run = await send_now_playing(original_chat_id, cap, button)
             db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
 
     # --- TELEGRAM ---
@@ -276,12 +269,7 @@ async def stream(
             cap = await get_caption(_, link, title[:23], duration_min, user_name)
             button = stream_markup(_, chat_id)
             
-            run = await app.send_message(
-                original_chat_id,
-                text=cap,
-                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                reply_markup=InlineKeyboardMarkup(button)
-            )
+            run = await send_now_playing(original_chat_id, cap, button)
             db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
 
     # --- LIVE ---
@@ -302,12 +290,7 @@ async def stream(
             cap = await get_caption(_, link, title[:23], duration_min, user_name)
             button = stream_markup(_, chat_id)
             
-            run = await app.send_message(
-                original_chat_id,
-                text=cap,
-                link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
-                reply_markup=InlineKeyboardMarkup(button)
-            )
+            run = await send_now_playing(original_chat_id, cap, button)
             db[chat_id][0]["mystic"], db[chat_id][0]["markup"] = run, "tg"
 
     # --- INDEX / M3U8 ---
