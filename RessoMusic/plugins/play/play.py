@@ -709,9 +709,9 @@ async def play_commnd(
                             forceplay=fplay,
                         )
                     except Exception as e:
-                        traceback.print_exc()
-                        print(f"[SONYMUSIC][DRX-FIRST-PLAY] {ex_type}: {e}", flush=True)
                         ex_type = type(e).__name__
+                        print(f"[SONYMUSIC][DRX-FIRST-PLAY] {ex_type}: {e}", flush=True)
+                        traceback.print_exc()
                         err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
                         return await mystic.edit_text(err)
                     await mystic.delete()
