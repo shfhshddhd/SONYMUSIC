@@ -37,6 +37,9 @@ from RessoMusic.utils.database import (
     get_lang,
     get_loop,
     group_assistant,
+    get_autoplay,
+    get_autoplay_history,
+    add_autoplay_history,
     is_autoend,
     music_on,
     remove_active_chat,
@@ -44,8 +47,9 @@ from RessoMusic.utils.database import (
     set_loop,
 )
 from RessoMusic.utils.exceptions import AssistantErr
-from RessoMusic.utils.formatters import check_duration, seconds_to_min, speed_converter
+from RessoMusic.utils.formatters import check_duration, seconds_to_min, speed_converter, time_to_seconds
 from RessoMusic.utils.inline.play import stream_markup
+from RessoMusic.utils.autoplay import candidates as autoplay_candidates
 from RessoMusic.utils.stream.autoclear import auto_clean
 from RessoMusic.utils.thumbnails import FIXED_THUMBNAIL_URL, get_thumb
 from strings import get_string
@@ -367,6 +371,68 @@ class Call(PyTgCalls):
             if users == 1:
                 autoend[chat_id] = datetime.now() + timedelta(minutes=1)
 
+    async def get_autoplay_item(self, chat_id: int, last_item: dict):
+        if not last_item or not await get_autoplay(chat_id):
+            return None
+
+        last_id = str(last_item.get("vidid") or "")
+        last_title = str(last_item.get("title") or "").strip()
+        history = await get_autoplay_history(chat_id)
+        recommendations = []
+
+        if last_id:
+            try:
+                recommendations = await autoplay_candidates(last_id, limit=10)
+            except Exception as ex:
+                LOGGER(__name__).warning(
+                    f"Autoplay recommendations failed in {chat_id}: "
+                    f"{type(ex).__name__}: {ex}"
+                )
+
+        selected = None
+        for item in recommendations:
+            video_id = item.get("id")
+            if not video_id or video_id == last_id or video_id in history:
+                continue
+            selected = item
+            break
+
+        if not selected and last_title:
+            for query in (last_title, f"{last_title} song"):
+                try:
+                    details, track_id = await YouTube.track(query, True)
+                except Exception:
+                    continue
+                video_id = (details or {}).get("vidid") or track_id
+                if not video_id or video_id == last_id or video_id in history:
+                    continue
+                selected = {
+                    "id": video_id,
+                    "title": (details or {}).get("title") or last_title,
+                    "duration": (details or {}).get("duration_min") or "00:00",
+                }
+                break
+
+        if not selected:
+            return None
+
+        video_id = selected["id"]
+        duration = selected.get("duration") or "00:00"
+        await add_autoplay_history(chat_id, video_id)
+
+        return {
+            "title": selected.get("title") or last_title or "Autoplay",
+            "dur": duration,
+            "streamtype": last_item.get("streamtype", "audio"),
+            "by": "♫ Autoplay",
+            "user_id": 0,
+            "chat_id": last_item.get("chat_id", chat_id),
+            "file": f"vid_{video_id}",
+            "vidid": video_id,
+            "seconds": time_to_seconds(duration) if duration != "00:00" else 0,
+            "played": 0,
+        }
+
     async def change_stream(self, client, chat_id):
         check = db.get(chat_id)
         popped = None
@@ -379,8 +445,13 @@ class Call(PyTgCalls):
                 await set_loop(chat_id, loop)
             await auto_clean(popped)
             if not check:
-                await _clear_(chat_id)
-                return await client.leave_group_call(chat_id)
+                autoplay_item = await self.get_autoplay_item(chat_id, popped)
+                if autoplay_item:
+                    db[chat_id].append(autoplay_item)
+                    check = db[chat_id]
+                else:
+                    await _clear_(chat_id)
+                    return await client.leave_group_call(chat_id)
         except:
             try:
                 await _clear_(chat_id)
