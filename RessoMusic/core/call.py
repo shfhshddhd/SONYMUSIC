@@ -379,66 +379,66 @@ class Call(PyTgCalls):
 
         last_id = str(last_item.get("vidid") or "")
         last_title = str(last_item.get("title") or "").strip()
+        if not last_id and not last_title:
+            return None
+
         history = await get_autoplay_history(chat_id)
+        fallback_queries = []
+        if last_title:
+            fallback_queries = [
+                last_title,
+                f"{last_title} song",
+            ]
+
         recommendations = []
+        try:
+            recommendations = await autoplay_candidates(
+                last_id,
+                limit=10,
+                fallback_queries=fallback_queries,
+            )
+        except Exception as ex:
+            LOGGER(__name__).error(
+                f"Autoplay engine failed in {chat_id}: "
+                f"{type(ex).__name__}: {ex}"
+            )
 
-        if last_id:
-            try:
-                recommendations = await autoplay_candidates(last_id, limit=10)
-            except Exception as ex:
-                LOGGER(__name__).warning(
-                    f"Autoplay recommendations failed in {chat_id}: "
-                    f"{type(ex).__name__}: {ex}"
-                )
-
-        selected = None
         for item in recommendations:
             video_id = item.get("id")
             if not video_id or video_id == last_id or video_id in history:
                 continue
-            selected = item
-            break
 
-        if not selected and last_title:
-            for query in (last_title, f"{last_title} song"):
-                try:
-                    details, track_id = await YouTube.track(query, True)
-                except Exception:
-                    continue
-                video_id = (details or {}).get("vidid") or track_id
-                if not video_id or video_id == last_id or video_id in history:
-                    continue
-                selected = {
-                    "id": video_id,
-                    "title": (details or {}).get("title") or last_title,
-                    "duration": (details or {}).get("duration_min") or "00:00",
-                }
-                break
+            duration = item.get("duration") or "00:00"
+            try:
+                duration_seconds = time_to_seconds(duration)
+            except Exception:
+                duration_seconds = 0
+                duration = "00:00"
 
-        if not selected:
-            return None
+            await add_autoplay_history(chat_id, video_id)
+            LOGGER(__name__).info(
+                f"Autoplay selected: {item.get('title', 'Unknown')} "
+                f"({video_id}) in {chat_id}"
+            )
 
-        video_id = selected["id"]
-        duration = selected.get("duration") or "00:00"
-        try:
-            duration_seconds = time_to_seconds(duration)
-        except Exception:
-            duration_seconds = 0
-            duration = "00:00"
-        await add_autoplay_history(chat_id, video_id)
+            return {
+                "title": item.get("title") or last_title or "Autoplay",
+                "dur": duration,
+                "streamtype": last_item.get("streamtype", "audio"),
+                "by": "♫ Autoplay",
+                "user_id": 0,
+                "chat_id": last_item.get("chat_id", chat_id),
+                "file": f"vid_{video_id}",
+                "vidid": video_id,
+                "seconds": duration_seconds,
+                "played": 0,
+            }
 
-        return {
-            "title": selected.get("title") or last_title or "Autoplay",
-            "dur": duration,
-            "streamtype": last_item.get("streamtype", "audio"),
-            "by": "♫ Autoplay",
-            "user_id": 0,
-            "chat_id": last_item.get("chat_id", chat_id),
-            "file": f"vid_{video_id}",
-            "vidid": video_id,
-            "seconds": duration_seconds,
-            "played": 0,
-        }
+        LOGGER(__name__).warning(
+            f"Autoplay found no usable recommendation for {chat_id}; "
+            f"last_id={last_id!r}"
+        )
+        return None
 
     async def change_stream(self, client, chat_id):
         if chat_id in self._transitioning:
