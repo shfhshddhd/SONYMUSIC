@@ -212,7 +212,9 @@ async def del_back_playlist(client, CallbackQuery, _):
                 return await CallbackQuery.answer("Skip is already processing.", show_alert=False)
             skip_locks.add(chat_id)
             asyncio.create_task(_release_skip_lock(chat_id))
-        check = db.get(chat_id)            txt = f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
+        check = db.get(chat_id)
+        if command == "Skip":
+            txt = f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
             popped = None
             try:
                 popped = check.pop(0)
