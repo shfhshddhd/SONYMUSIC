@@ -425,6 +425,7 @@ class Call(PyTgCalls):
                 "title": item.get("title") or last_title or "Autoplay",
                 "dur": duration,
                 "streamtype": "autoplay_query",
+                "video_mode": last_item.get("streamtype", "audio") == "video",
                 "by": "♫ Autoplay",
                 "user_id": 0,
                 "chat_id": last_item.get("chat_id", chat_id),
@@ -519,7 +520,7 @@ class Call(PyTgCalls):
                     return await app.send_message(original_chat_id, text=_["call_6"])
 
                 details, resolved_type, resolved_id = resolved
-                video = bool(str(last_item.get("streamtype", "audio")) == "video")
+                video = bool(check[0].get("video_mode", False))
 
                 if resolved_type == "drx":
                     file_path = details["filepath"]
