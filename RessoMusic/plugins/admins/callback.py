@@ -28,6 +28,7 @@ from pyrogram.errors import (
 from RessoMusic.utils.database import get_assistant
 from RessoMusic.utils.decorators.language import languageCB
 from RessoMusic.utils.formatters import seconds_to_min
+from RessoMusic.utils.query_resolver import resolve_query
 from RessoMusic.utils.inline import close_markup, stream_markup
 from RessoMusic.utils.stream.autoclear import auto_clean
 from RessoMusic.utils.thumbnails import FIXED_THUMBNAIL_URL, get_thumb
@@ -223,6 +224,8 @@ async def del_back_playlist(client, CallbackQuery, _):
             skip_locks.add(chat_id)
             asyncio.create_task(_release_skip_lock(chat_id))
         check = db.get(chat_id)
+        if not check:
+            return await CallbackQuery.answer("This song is no longer active.", show_alert=True)
         if command == "Skip":
             txt = f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
             popped = None
@@ -279,7 +282,53 @@ async def del_back_playlist(client, CallbackQuery, _):
             db[chat_id][0]["seconds"] = check[0]["old_second"]
             db[chat_id][0]["speed_path"] = None
             db[chat_id][0]["speed"] = 1.0
-        if "live_" in queued:
+        if streamtype == "autoplay_query":
+            try:
+                resolved = await resolve_query(queued)
+            except Exception:
+                return await CallbackQuery.message.reply_text(_["call_6"])
+            if not resolved:
+                return await CallbackQuery.message.reply_text(_["call_6"])
+            details, resolved_type, resolved_id = resolved
+            video_mode = bool(check[0].get("video_mode", False))
+            if resolved_type == "drx":
+                file_path = details["filepath"]
+            else:
+                mystic = await CallbackQuery.message.reply_text(
+                    _["call_7"],
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                )
+                try:
+                    file_path, direct = await YouTube.download(
+                        resolved_id, mystic, videoid=True, video=video_mode
+                    )
+                except:
+                    return await mystic.edit_text(_["call_6"])
+                try:
+                    await mystic.delete()
+                except:
+                    pass
+            try:
+                await AMBOTOP.skip_stream(chat_id, file_path, video=video_mode)
+            except:
+                return await CallbackQuery.message.reply_text(_["call_6"])
+            button = stream_markup(_, chat_id)
+            link = details.get(
+                "link",
+                f"https://t.me/{app.username}?start=info_{resolved_id}",
+            )
+            run = await CallbackQuery.message.reply_photo(
+                photo=FIXED_THUMBNAIL_URL,
+                caption=await get_caption(
+                    _, link, details.get("title", title)[:23],
+                    details.get("duration_min", duration), user
+                ),
+                reply_markup=InlineKeyboardMarkup(button),
+            )
+            db[chat_id][0]["mystic"] = run
+            db[chat_id][0]["markup"] = "stream"
+            await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
+        elif "live_" in queued:
             n, link = await YouTube.video(videoid, True)
             if n == 0:
                 return await CallbackQuery.message.reply_text(
