@@ -107,9 +107,6 @@ async def download_song(link: str):
             print(f"[FALLBACK] Trying yt-dlp for {video_id}")
 
         cookie_file = cookie_txt_file()
-        if not cookie_file:
-            print("[FAIL] No cookies found for yt-dlp fallback.")
-            return None
 
         ydl_opts = {
             "format": "bestaudio/best",
@@ -118,9 +115,12 @@ async def download_song(link: str):
             "nocheckcertificate": True,
             "quiet": True,
             "no_warnings": True,
-            "cookiefile": cookie_file,
             "noplaylist": True,
         }
+
+        # Cookies are optional. Use them when available.
+        if cookie_file:
+            ydl_opts["cookiefile"] = cookie_file
 
         def _yt_dlp_download():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
