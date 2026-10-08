@@ -7,7 +7,7 @@ from py_yt import VideosSearch
 _INNERTUBE_KEY = "AIzaSyBOti4m-6x9WDnZIjIeyEU21OpBXqWBgw"
 _INNERTUBE_CLIENT_VERSION = "2.20250101.01.00"
 _VIDEO_ID_RE = re.compile(
-    r"(?i)(?:youtube\\.com/(?:watch\\?v=|embed/|shorts/|live/)|youtu\\.be/)"
+    r"(?i)(?:youtube\.com/(?:watch\?v=|embed/|shorts/|live/)|youtu\.be/)"
     r"([A-Za-z0-9_-]{11})"
 )
 
@@ -131,9 +131,6 @@ async def candidates(
     fallback_queries: list[str] | None = None,
 ) -> list[dict]:
     video_id = _video_id(last_id)
-    if not video_id:
-        return []
-
     out = []
     seen = set()
 
@@ -166,11 +163,9 @@ async def candidates(
             seen.add(item["id"])
             unique.append(item)
 
-    if unique:
-        return unique[:limit]
-
-    # YouTube's recommendation endpoint can fail/change format. In that case
-    # use normal multi-result search instead of the old single-result fallback.
+    # YouTube's recommendation endpoint can fail/change format, or all
+    # recommendations may already be present in autoplay history. In both
+    # cases, use normal multi-result search to find a fresh candidate.
     for query in fallback_queries or []:
         try:
             for item in await _search_candidates(query, limit):
