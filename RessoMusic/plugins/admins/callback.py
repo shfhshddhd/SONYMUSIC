@@ -47,7 +47,7 @@ checker = {}
 upvoters = {}
 
 
-@app.on_callback_query(filters.regex("^autoplay:toggle$") & ~BANNED_USERS)
+skip_locks = set()\n\n\nasync def _release_skip_lock(chat_id):\n    await asyncio.sleep(1)\n    skip_locks.discard(chat_id)\n\n\n@app.on_callback_query(filters.regex("^autoplay:toggle$") & ~BANNED_USERS)
 @languageCB
 async def autoplay_toggle(client, CallbackQuery, _):
     chat_id = CallbackQuery.message.chat.id
