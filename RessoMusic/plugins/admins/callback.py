@@ -1,7 +1,7 @@
 import asyncio
 from telegram import CallbackQuery
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 
 from RessoMusic import YouTube, app
 from RessoMusic.core.call import AMBOTOP
@@ -207,9 +207,12 @@ async def del_back_playlist(client, CallbackQuery, _):
         )
         await CallbackQuery.message.delete()
     elif command == "Skip" or command == "Replay":
-        check = db.get(chat_id)
         if command == "Skip":
-            txt = f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
+            if chat_id in skip_locks:
+                return await CallbackQuery.answer("Skip is already processing.", show_alert=False)
+            skip_locks.add(chat_id)
+            asyncio.create_task(_release_skip_lock(chat_id))
+        check = db.get(chat_id)            txt = f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
             popped = None
             try:
                 popped = check.pop(0)
