@@ -14,6 +14,13 @@ from RessoMusic import Apple, Resso, SoundCloud, Spotify, Telegram, YouTube, app
 from RessoMusic.core.call import AMBOTOP
 from RessoMusic.core.mongo import mongodb
 from RessoMusic.utils import seconds_to_min, time_to_seconds
+from RessoMusic.utils.query_resolver import (
+    drx_search_songs,
+    get_500x500_image,
+    get_best_download_url,
+    resolve_query,
+    seconds_to_min_str,
+)
 from RessoMusic.utils.channelplay import get_channeplayCB
 from RessoMusic.utils.decorators.language import languageCB
 from RessoMusic.utils.decorators.play import PlayWrapper
@@ -35,61 +42,6 @@ DRX_API_BASE = "https://apidrx-music.vercel.app/api"
 
 # MongoDB collection for admin-added songs
 addsongdb = mongodb.added_songs
-
-
-# ─── DRX API HELPERS ──────────────────────────────────────────────────────────
-
-async def drx_search_songs(query: str):
-    """Search songs via DRX API. Returns list of results or None."""
-    url = f"{DRX_API_BASE}/search/songs"
-    params = {"query": query}
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                if resp.status != 200:
-                    return None
-                data = await resp.json()
-                if data.get("success") and data.get("data", {}).get("results"):
-                    return data["data"]["results"]
-                return None
-    except Exception:
-        return None
-
-
-def get_best_download_url(download_urls: list):
-    """Pick the best quality URL between 96kbps and 320kbps."""
-    quality_map = {}
-    for item in download_urls:
-        q = item["quality"]
-        if q.endswith("kbps"):
-            kbps = int(q.replace("kbps", ""))
-            quality_map[kbps] = item["url"]
-    # Prefer 160kbps, then 320kbps, then 96kbps, then 48kbps
-    for preferred in [160, 320, 96, 48, 12]:
-        if preferred in quality_map:
-            return quality_map[preferred]
-    # fallback: return first available
-    if download_urls:
-        return download_urls[0]["url"]
-    return None
-
-
-def get_500x500_image(images: list):
-    """Get the 500x500 image URL from the image list."""
-    for img in images:
-        if img["quality"] == "500x500":
-            return img["url"]
-    # fallback
-    if images:
-        return images[-1]["url"]
-    return config.PLAYLIST_IMG_URL
-
-
-def seconds_to_min_str(seconds: int):
-    """Convert seconds to MM:SS format."""
-    mins = seconds // 60
-    secs = seconds % 60
-    return f"{mins}:{secs:02d}"
 
 
 # ─── ADDSONG DB HELPERS ───────────────────────────────────────────────────────
@@ -661,90 +613,60 @@ async def play_commnd(
             await mystic.delete()
             return await play_logs(message, streamtype="Admin Added Song")
         
-        # ─── DRX API SEARCH ─────────────────────────────────────────────────
+        # ─── SHARED QUERY RESOLUTION (DRX → YouTube fallback) ────────────────
         slider = True
-        drx_results = await drx_search_songs(query)
-        
-        if drx_results and len(drx_results) > 0:
-            # Use the first result from DRX API
-            song = drx_results[0]
-            streamtype = "drx"
-            
-            # Build details compatible with stream function
-            duration_sec = song.get("duration", 0)
-            duration_min = seconds_to_min_str(duration_sec)
-            thumbnail = get_500x500_image(song.get("image", []))
-            audio_url = get_best_download_url(song.get("downloadUrl", []))
-            
-            if not audio_url:
-                # Fallback to YouTube if DRX has no download URL
+        try:
+            resolved = await resolve_query(query)
+        except Exception:
+            resolved = None
+
+        if not resolved:
+            return await mystic.edit_text(_["play_3"])
+
+        details, streamtype, track_id = resolved
+
+        if streamtype == "drx":
+            if str(playmode) == "Direct":
                 try:
-                    details, track_id = await YouTube.track(query)
-                except:
-                    return await mystic.edit_text(_["play_3"])
-                streamtype = "youtube"
-            else:
-                # Use DRX data
-                details = {
-                    "title": song["name"],
-                    "duration_min": duration_min,
-                    "thumb": thumbnail,
-                    "vidid": song.get("id", ""),
-                    "filepath": audio_url,
-                }
-                
-                if str(playmode) == "Direct":
-                    # Stream directly
-                    try:
-                        await stream(
-                            _,
-                            mystic,
-                            user_id,
-                            details,
-                            chat_id,
-                            user_name,
-                            message.chat.id,
-                            video=video,
-                            streamtype="drx",
-                            forceplay=fplay,
-                        )
-                    except Exception as e:
-                        ex_type = type(e).__name__
-                        print(f"[SONYMUSIC][DRX-FIRST-PLAY] {ex_type}: {e}", flush=True)
-                        traceback.print_exc()
-                        err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
-                        return await mystic.edit_text(err)
-                    await mystic.delete()
-                    return await play_logs(message, streamtype="DRX API")
-                else:
-                    # Show track selection with slider
-                    buttons = slider_markup(
+                    await stream(
                         _,
-                        song.get("id", ""),
-                        message.from_user.id,
-                        query,
-                        0,
-                        "c" if channel else "g",
-                        "f" if fplay else "d",
+                        mystic,
+                        user_id,
+                        details,
+                        chat_id,
+                        user_name,
+                        message.chat.id,
+                        video=video,
+                        streamtype="drx",
+                        forceplay=fplay,
                     )
-                    await mystic.delete()
-                    await message.reply_photo(
-                        photo=thumbnail,
-                        has_spoiler=True,
-                        caption=_["play_10"].format(
-                            song["name"].title(),
-                            duration_min,
-                        ),
-                        reply_markup=InlineKeyboardMarkup(buttons),
-                    )
-                    return await play_logs(message, streamtype="Searched on DRX")
-        else:
-            # Fallback to YouTube if DRX returns nothing
-            try:
-                details, track_id = await YouTube.track(query)
-            except:
-                return await mystic.edit_text(_["play_3"])
-            streamtype = "youtube"
+                except Exception as e:
+                    ex_type = type(e).__name__
+                    print(f"[SONYMUSIC][DRX-FIRST-PLAY] {ex_type}: {e}", flush=True)
+                    traceback.print_exc()
+                    err = e if ex_type == "AssistantErr" else _["general_2"].format(ex_type)
+                    return await mystic.edit_text(err)
+                await mystic.delete()
+                return await play_logs(message, streamtype="DRX API")
+            buttons = slider_markup(
+                _,
+                track_id,
+                message.from_user.id,
+                query,
+                0,
+                "c" if channel else "g",
+                "f" if fplay else "d",
+            )
+            await mystic.delete()
+            return await message.reply_photo(
+                photo=details.get("thumb", config.PLAYLIST_IMG_URL),
+                has_spoiler=True,
+                caption=_["play_10"].format(
+                    details.get("title", query).title(),
+                    details.get("duration_min", "00:00"),
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons),
+            )
     
     # ─── DIRECT PLAY MODE ────────────────────────────────────────────────────
     if str(playmode) == "Direct":
