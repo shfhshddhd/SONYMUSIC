@@ -131,7 +131,65 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["speed_path"] = None
         db[chat_id][0]["speed"] = 1.0
         
-    if "live_" in queued:
+    if streamtype == "autoplay_query":
+        try:
+            resolved = await resolve_query(queued)
+        except Exception:
+            return await message.reply_text(_["call_6"])
+
+        if not resolved:
+            return await message.reply_text(_["call_6"])
+
+        details, resolved_type, resolved_id = resolved
+        video = bool(check[0].get("video_mode", False))
+
+        if resolved_type == "drx":
+            file_path = details["filepath"]
+        else:
+            mystic = await message.reply_text(
+                _["call_7"],
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
+            try:
+                file_path, direct = await YouTube.download(
+                    resolved_id,
+                    mystic,
+                    videoid=True,
+                    video=video,
+                )
+            except:
+                return await mystic.edit_text(_["call_6"])
+            try:
+                await mystic.delete()
+            except:
+                pass
+
+        try:
+            await AMBOTOP.skip_stream(chat_id, file_path, video=video, image=None)
+        except:
+            return await message.reply_text(_["call_6"])
+
+        button = stream_markup(_, chat_id)
+        link = details.get(
+            "link",
+            f"https://t.me/{app.username}?start=info_{resolved_id}",
+        )
+        cap = await get_caption(
+            _,
+            link,
+            details.get("title", title)[:23],
+            details.get("duration_min", check[0]["dur"]),
+            user,
+        )
+        run = await message.reply_text(
+            text=cap,
+            link_preview_options=LinkPreviewOptions(is_disabled=False, show_above_text=True),
+            reply_markup=InlineKeyboardMarkup(button),
+        )
+        db[chat_id][0]["mystic"] = run
+        db[chat_id][0]["markup"] = "stream"
+
+    elif "live_" in queued:
         n, link = await YouTube.video(videoid, True)
         if n == 0:
             return await message.reply_text(_["admin_7"].format(title))
@@ -157,7 +215,7 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["markup"] = "tg"
         
     elif "vid_" in queued:
-        mystic = await message.reply_text(_["call_7"], disable_web_page_preview=True)
+        mystic = await message.reply_text(_["call_7"], link_preview_options=LinkPreviewOptions(is_disabled=True))
         try:
             file_path, direct = await YouTube.download(
                 videoid,
