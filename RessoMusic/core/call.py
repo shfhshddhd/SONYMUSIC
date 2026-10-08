@@ -142,6 +142,8 @@ class Call(PyTgCalls):
             self.userbot5,
             cache_duration=100,
         )
+        # Prevent StreamAudioEnded and manual Skip from advancing the same chat twice.
+        self._transitioning = set()
 
     async def pause_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
@@ -439,6 +441,15 @@ class Call(PyTgCalls):
         }
 
     async def change_stream(self, client, chat_id):
+        if chat_id in self._transitioning:
+            return
+        self._transitioning.add(chat_id)
+        try:
+            return await self._change_stream(client, chat_id)
+        finally:
+            self._transitioning.discard(chat_id)
+
+    async def _change_stream(self, client, chat_id):
         check = db.get(chat_id)
         popped = None
         loop = await get_loop(chat_id)
@@ -448,6 +459,14 @@ class Call(PyTgCalls):
             else:
                 loop = loop - 1
                 await set_loop(chat_id, loop)
+            # Remove the completed song's group message before showing the next track.
+            if popped:
+                try:
+                    old_message = popped.get("mystic")
+                    if old_message:
+                        await old_message.delete()
+                except Exception:
+                    pass
             await auto_clean(popped)
             if not check:
                 autoplay_item = await self.get_autoplay_item(chat_id, popped)
