@@ -50,6 +50,7 @@ from RessoMusic.utils.exceptions import AssistantErr
 from RessoMusic.utils.formatters import check_duration, seconds_to_min, speed_converter, time_to_seconds
 from RessoMusic.utils.inline.play import stream_markup
 from RessoMusic.utils.autoplay import candidates as autoplay_candidates
+from RessoMusic.utils.query_resolver import resolve_query
 from RessoMusic.utils.stream.autoclear import auto_clean
 from RessoMusic.utils.thumbnails import FIXED_THUMBNAIL_URL, get_thumb
 from strings import get_string
