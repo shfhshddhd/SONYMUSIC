@@ -424,11 +424,11 @@ class Call(PyTgCalls):
             return {
                 "title": item.get("title") or last_title or "Autoplay",
                 "dur": duration,
-                "streamtype": last_item.get("streamtype", "audio"),
+                "streamtype": "autoplay_query",
                 "by": "♫ Autoplay",
                 "user_id": 0,
                 "chat_id": last_item.get("chat_id", chat_id),
-                "file": f"vid_{video_id}",
+                "file": item.get("title") or last_title or "Autoplay",
                 "vidid": video_id,
                 "seconds": duration_seconds,
                 "played": 0,
@@ -503,7 +503,80 @@ class Call(PyTgCalls):
             # Link preview settings for "above text" logic
             preview_options = LinkPreviewOptions(is_disabled=False, show_above_text=True)
 
-            if "live_" in queued:
+            if streamtype == "autoplay_query":
+                # Autoplay only selects the next query. Resolve playback through
+                # the same DRX -> YouTube source pipeline used by normal /play.
+                try:
+                    resolved = await resolve_query(queued)
+                except Exception as ex:
+                    LOGGER(__name__).error(
+                        f"Autoplay playback resolution failed in {chat_id}: "
+                        f"{type(ex).__name__}: {ex}"
+                    )
+                    return await app.send_message(original_chat_id, text=_["call_6"])
+
+                if not resolved:
+                    return await app.send_message(original_chat_id, text=_["call_6"])
+
+                details, resolved_type, resolved_id = resolved
+                video = bool(str(last_item.get("streamtype", "audio")) == "video")
+
+                if resolved_type == "drx":
+                    file_path = details["filepath"]
+                else:
+                    mystic = await app.send_message(original_chat_id, _["call_7"])
+                    try:
+                        file_path, direct = await YouTube.download(
+                            resolved_id,
+                            mystic,
+                            videoid=True,
+                            video=video,
+                        )
+                    except Exception:
+                        try:
+                            await mystic.delete()
+                        except Exception:
+                            pass
+                        return await app.send_message(original_chat_id, text=_["call_6"])
+                    try:
+                        await mystic.delete()
+                    except Exception:
+                        pass
+
+                stream = (
+                    AudioVideoPiped(
+                        file_path,
+                        audio_parameters=HighQualityAudio(),
+                        video_parameters=MediumQualityVideo(),
+                    )
+                    if video
+                    else AudioPiped(
+                        file_path,
+                        audio_parameters=HighQualityAudio(),
+                    )
+                )
+                try:
+                    await client.change_stream(chat_id, stream)
+                except Exception:
+                    return await app.send_message(original_chat_id, text=_["call_6"])
+
+                button = stream_markup(_, chat_id)
+                link = details.get(
+                    "link",
+                    f"https://t.me/{app.username}?start=info_{resolved_id}",
+                )
+                cap = await get_caption(
+                    _,
+                    link,
+                    details.get("title", title)[:23],
+                    details.get("duration_min", check[0]["dur"]),
+                    user,
+                )
+                run = await send_now_playing(original_chat_id, cap, button)
+                db[chat_id][0]["mystic"] = run
+                db[chat_id][0]["markup"] = "stream"
+
+            elif "live_" in queued:
                 n, link = await YouTube.video(videoid, True)
                 if n == 0:
                     return await app.send_message(
