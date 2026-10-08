@@ -60,18 +60,22 @@ async def skip(cli, message: Message, _, chat_id):
                             if popped:
                                 await auto_clean(popped)
                             if not check:
-                                try:
-                                    await message.reply_text(
-                                        text=_["admin_6"].format(
-                                            message.from_user.mention,
-                                            message.chat.title,
-                                        ),
-                                        reply_markup=close_markup(_),
-                                    )
-                                    await AMBOTOP.stop_stream(chat_id)
-                                except:
-                                    return
-                                break
+                                autoplay_item = await AMBOTOP.get_autoplay_item(chat_id, popped)
+                                if autoplay_item:
+                                    check.append(autoplay_item)
+                                else:
+                                    try:
+                                        await message.reply_text(
+                                            text=_["admin_6"].format(
+                                                message.from_user.mention,
+                                                message.chat.title,
+                                            ),
+                                            reply_markup=close_markup(_),
+                                        )
+                                        await AMBOTOP.stop_stream(chat_id)
+                                    except:
+                                        return
+                                    break
                     else:
                         return await message.reply_text(_["admin_11"].format(count))
                 else:
@@ -88,16 +92,20 @@ async def skip(cli, message: Message, _, chat_id):
             if popped:
                 await auto_clean(popped)
             if not check:
-                await message.reply_text(
-                    text=_["admin_6"].format(
-                        message.from_user.mention, message.chat.title
-                    ),
-                    reply_markup=close_markup(_),
-                )
-                try:
-                    return await AMBOTOP.stop_stream(chat_id)
-                except:
-                    return
+                autoplay_item = await AMBOTOP.get_autoplay_item(chat_id, popped)
+                if autoplay_item:
+                    check.append(autoplay_item)
+                else:
+                    await message.reply_text(
+                        text=_["admin_6"].format(
+                            message.from_user.mention, message.chat.title
+                        ),
+                        reply_markup=close_markup(_),
+                    )
+                    try:
+                        return await AMBOTOP.stop_stream(chat_id)
+                    except:
+                        return
         except:
             try:
                 await message.reply_text(
